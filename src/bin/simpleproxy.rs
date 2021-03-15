@@ -7,5 +7,5 @@ fn type_of<T>(_: T) -> &'static str {
 
 fn main() {
     let s: u16 = 4000;
-    println!("{:#?}", type_of(([0,0,0,0], s)));
+    println!("{:#?}", type_of(([0,0,0,0], s))); 
 }

@@ -1,4 +1,4 @@
-use hyper::{Body, Respose, StatusCode}
+use hyper::{Body, Response, StatusCode};
 use std::error::Error;
 
 #[derive(Debug)]
@@ -17,7 +17,7 @@ impl From<MiddlewareError> for Response<Body> {
 
 impl MiddlewareError {
     pub fn new(description: String, body: Option<String>, status: StatusCode) -> MiddlewareError {
-        let body = match {
+        let body = match body {
             Some(body) => body,
             None => {
                 let err = format!("Internal server error: {}", &description);

@@ -6,6 +6,9 @@ extern crate log;
 #[macro_use]
 extern crate serde_derive;
 
+pub mod middlewares;
+pub mod proxy;
+
 
 use hyper::server::conn::AddrStream;
 use hyper::service::make_service_fn;
@@ -14,6 +17,9 @@ use hyper::Server;
 use std::fmt;
 use std::convert::Infallible;
 use std::sync::{Arc, Mutex};
+
+use crate::proxy::middleware::MiddleWare;
+use crate::proxy::service::ProxyService;
 
 
 // type Middlewares = Arc<Mutex<Vec<Box<dyn Middleware + Send + Sync>>>>;
