@@ -17,7 +17,6 @@ use rand::rngs::SmallRng;
 use crate::proxy::middleware::MiddlewareResult::*;
 use crate::Middlewares;
 
-
 pub type State = Arc<Mutex<HashMap<(String, u64), String>>>;
 
 pub struct ProxyService {
@@ -25,13 +24,13 @@ pub struct ProxyService {
     middlewares: Middlewares,
     state: State,
     remote_addr: SocketAddr,
-    rng: SmallRng    
+    rng: SmallRng,
 }
 
 #[derive(Clone, Copy)]
 pub struct ServiceContext {
     pub remote_addr: SocketAddr,
-    pub req_id: u64
+    pub req_id: u64,
 }
 
 impl Service<Request<hyper::Body>> for ProxyService {
@@ -43,7 +42,7 @@ impl Service<Request<hyper::Body>> for ProxyService {
         match self.client.poll_ready(cx) {
             Poll::Ready(Ok(())) => Poll::Ready(Ok(())),
             Poll::Ready(Err(e)) => Poll::Ready(Err(e)),
-            Poll::Pending => Poll::Pending,
+            Poll::Pending => Poll::Pending
         }
     }
 
@@ -85,45 +84,59 @@ impl Service<Request<hyper::Body>> for ProxyService {
         }
 
         let res = self
-            .client
-            .request(req)
-            .map_err(move |err| {
-                for mw in mws_failure.lock().unwrap().iter_mut() {
-                    if let Err(err) = mw.request_failure(&err, &context, &state_failure) {
-                        error!("Request_failure errored: {:?}", &err);
+        .client
+        .request(req)
+        .map_err(move |err| {
+            for mw in mws_failure().lock().unwrap().iter_mut() {
+                if let Err(err) = mw.request_failure(&err, &context, &state_failure) {
+                error!("Request_failure errored: {:?}", &err);
+                }
+            }
+            err
+        })
+        .map_ok(move |mut res| {
+            for mw in mws_success().lock().unwrap().iter_mut() {
+                match mw.request_success(&mut res, &context, &state_success) {
+                    Err(err) => res = Response::from(err),
+                    Ok(RespondWith(response)) => res = response,
+                    Ok(Next) => ()
+                }
+            }
+            res
+        })
+        .map_ok_or_else(
+            move |err| {
+                let mut res = Err(err);
+                for mw in mws_after_success().lock().unwrap().iter_mut() {
+                    match mw.after_request(None, &context, &state_after_success) {
+                        Err(err) => res = Ok(Response::from(err)),
+                        Ok(RespondWith(response)) => res = Ok(response),
+                        Ok(Next) => ()
                     }
                 }
-                err
-            })
-            .map_ok(move |mut res| {
-                for mw in mws_success.lock().unwrap().iter_mut() {
-                    match mw.request_success(&mut res, &context, &state_success) {
+                res
+            },
+            move |mut res| {
+                for mw in mws_after_failure().lock().unwrap().iter_mut() {
+                    match mw.after_request(Some(&mut res), &context, &state_after_failure) {
                         Err(err) => res = Response::from(err),
                         Ok(RespondWith(response)) => res = response,
-                        Ok(Next) => (),
+                        Ok(Next) => ()
                     }
                 }
-            })
-            .map_ok_or_else(
-                move |err| {
-                    let mut res = Err(err);
-                    for mw in mws_after_success.lock().unwrap().iter_mut() {
-                        match mw.after_request(None, &context, &state_after_success) {
-                            Err(err) => res = Ok(Response::from(err)),
-                            OK(RespondWith(response)) => res = Ok(response),
-                            Ok(Next) => ()
-                        }
-                    }
-                }
-            )
+                Ok(res)
+            }
+        );
+        Box::pin(res)
     }
 }
 
 impl ProxyService {
-    fn early_response(&self, context: &ServiceContext,
-        mut res : Response<Body>, state: &State
+    fn early_response(
+        &self, context: &ServiceContext,
+        mut res: Response<Body>, state: &State
     ) -> Response<Body> {
-        for mw in self.middlewares.lock().iter_mut() {
+        for mw in self.middlewares.lock().unwrap().iter_mut() {
             match mw.after_request(Some(&mut res), context, state) {
                 Err(err) => res = Response::from(err),
                 Ok(RespondWith(response)) => res = response,
@@ -134,12 +147,11 @@ impl ProxyService {
         res
     }
 
-
     fn clear_state(&self) {
         if let Ok(mut state) = self.state.lock() {
             state.clear();
         } else {
-            // error!("[FATAL] Cannot lock state in clean_stale_state");
+            error!("[FATAL] Cannot lock state in clean_stale_state");
         }
     }
 

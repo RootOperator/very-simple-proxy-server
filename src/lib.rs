@@ -18,7 +18,7 @@ use std::fmt;
 use std::convert::Infallible;
 use std::sync::{Arc, Mutex};
 
-use crate::proxy::middleware::MiddleWare;
+use crate::proxy::middleware::Middleware;
 use crate::proxy::service::ProxyService;
 
 
