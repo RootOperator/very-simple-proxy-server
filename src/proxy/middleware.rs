@@ -3,6 +3,7 @@ use crate::proxy::service::{ServiceContext, State};
 use hyper::{Body, Error, Request, Response};
 
 
+#[derive(Debug)]
 pub enum MiddlewareResult {
     RespondWith(Response<hyper::Body>),
     Next
@@ -26,7 +27,7 @@ pub trait Middleware {
     where 
         Self: Sized
     {
-        let mut state = state.lock();
+        let state = state.lock();
         state.unwrap().insert((self.get_name(), req_id), data);
         Ok(())
     }
@@ -35,9 +36,9 @@ pub trait Middleware {
     where
         Self: Sized
     {
-        let state = state.lock();
-        debug!("State length: {}", state.unwrap().len());
-        let state = match state.unwrap().get(&(Self::name(), req_id)) {
+        let state = state.lock()?;
+        debug!("State length: {}", state.len());
+        let state = match state.get(&(Self::name(), req_id)) {
             None => None,
             Some(state) => Some(state.to_string())
         };
@@ -67,13 +68,13 @@ pub trait Middleware {
     }
 
     fn request_failure(&mut self, _err: &Error, _ctx: &ServiceContext, _state: &State) -> 
-        Result<MiddlewareResult, MiddlewareResult>
+        Result<MiddlewareResult, MiddlewareError>
     {
         Ok(Next)
     }
 
     fn request_success(&mut self, _res: &mut Response<Body>, _ctx: &ServiceContext, _state: &State) -> 
-        Result<MiddlewareResult, MiddlewareResult>
+        Result<MiddlewareResult, MiddlewareError>
     {
         Ok(Next)
     }

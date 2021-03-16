@@ -87,15 +87,15 @@ impl Service<Request<hyper::Body>> for ProxyService {
         .client
         .request(req)
         .map_err(move |err| {
-            for mw in mws_failure().lock().unwrap().iter_mut() {
+            for mw in mws_failure.lock().unwrap().iter_mut() {
                 if let Err(err) = mw.request_failure(&err, &context, &state_failure) {
-                error!("Request_failure errored: {:?}", &err);
+                    error!("Request_failure errored: {:?}", &err);
                 }
             }
             err
         })
         .map_ok(move |mut res| {
-            for mw in mws_success().lock().unwrap().iter_mut() {
+            for mw in mws_success.lock().unwrap().iter_mut() {
                 match mw.request_success(&mut res, &context, &state_success) {
                     Err(err) => res = Response::from(err),
                     Ok(RespondWith(response)) => res = response,
@@ -107,7 +107,7 @@ impl Service<Request<hyper::Body>> for ProxyService {
         .map_ok_or_else(
             move |err| {
                 let mut res = Err(err);
-                for mw in mws_after_success().lock().unwrap().iter_mut() {
+                for mw in mws_after_success.lock().unwrap().iter_mut() {
                     match mw.after_request(None, &context, &state_after_success) {
                         Err(err) => res = Ok(Response::from(err)),
                         Ok(RespondWith(response)) => res = Ok(response),
@@ -117,7 +117,7 @@ impl Service<Request<hyper::Body>> for ProxyService {
                 res
             },
             move |mut res| {
-                for mw in mws_after_failure().lock().unwrap().iter_mut() {
+                for mw in mws_after_failure.lock().unwrap().iter_mut() {
                     match mw.after_request(Some(&mut res), &context, &state_after_failure) {
                         Err(err) => res = Response::from(err),
                         Ok(RespondWith(response)) => res = response,

@@ -17,12 +17,13 @@ use hyper::Server;
 use std::fmt;
 use std::convert::Infallible;
 use std::sync::{Arc, Mutex};
+use std::net::SocketAddr;
 
 use crate::proxy::middleware::Middleware;
 use crate::proxy::service::ProxyService;
 
 
-// type Middlewares = Arc<Mutex<Vec<Box<dyn Middleware + Send + Sync>>>>;
+type Middlewares = Arc<Mutex<Vec<Box<dyn Middleware + Send + Sync>>>>;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Environment {
@@ -57,7 +58,7 @@ impl std::str::FromStr for Environment {
 pub struct SimpleProxy {
     port : u16,
     environment: Environment,
-    // middlewares: MiddleWares,
+    middlewares: Middlewares,
 }
 
 impl SimpleProxy {
@@ -65,16 +66,32 @@ impl SimpleProxy {
         SimpleProxy {
             port,
             environment,
-            // middlewares: Arc::new(Mutex::new(vec![]))
+            middlewares: Arc::new(Mutex::new(vec![]))
         }
     }
 
-    pub async fn run(&self) /*-> Result<(), Box<dyn std::error::Error + Send + Sync>>*/ {
-        let addr: ([i32; 4], u16) = ([0,0,0,0], self.port).into();
+    pub async fn run(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let addr: SocketAddr = ([0,0,0,0], self.port).into();
 
         info!("Running proxy in {} mode on: {:?}", self.environment, &addr);
-        // let middlewares = Arc::clone(&self.middlewares);
+        let middlewares = Arc::clone(&self.middlewares);
+        let make_svc = make_service_fn(move |socket: &AddrStream| {
+            let remote_addr = socket.remote_addr();
+            let middlewares = middlewares.clone();
+            debug!("Handling connection from IP: {}", &remote_addr);
+            async move { Ok::<_, Infallible>(ProxyService::new(middlewares, remote_addr)) }
+        });
 
+        let server = Server::bind(&addr).serve(make_svc);
+
+        if let Err(e) = server.await {
+            eprintln!("server error: {}", e);
+        }
+        Ok(())
+    }
+
+    pub fn add_middleware(&mut self, middleware: Box<dyn Middleware + Send + Sync>) {
+        self.middlewares.lock().unwrap().push(middleware);
     }
 }
 
