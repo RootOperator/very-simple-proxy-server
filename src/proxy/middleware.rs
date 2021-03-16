@@ -37,13 +37,13 @@ pub trait Middleware {
         Self: Sized
     {
         let state = state.lock()?;
-        debug!("State length: {}", state.len());
+        println!("State length: {}", state.len());
         let state = match state.get(&(Self::name(), req_id)) {
             None => None,
             Some(state) => Some(state.to_string())
         };
 
-        debug!("[{}] State for {}: {:?}", Self::name(), &req_id.to_string()[..6], state);
+        println!("[{}] State for {}: {:?}", Self::name(), &req_id.to_string()[..6], state);
 
         Ok(state)
     }

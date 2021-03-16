@@ -1,7 +1,5 @@
 #![allow(non_snake_case, unused_imports, unused_braces)]
 
-#[macro_use]
-extern crate log;
 #[cfg(feature = "router")]
 #[macro_use]
 extern crate serde_derive;
@@ -73,12 +71,12 @@ impl SimpleProxy {
     pub async fn run(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let addr: SocketAddr = ([0,0,0,0], self.port).into();
 
-        info!("Running proxy in {} mode on: {:?}", self.environment, &addr);
+        println!("Running proxy in {} mode on: {:?}", self.environment, &addr);
         let middlewares = Arc::clone(&self.middlewares);
         let make_svc = make_service_fn(move |socket: &AddrStream| {
             let remote_addr = socket.remote_addr();
             let middlewares = middlewares.clone();
-            debug!("Handling connection from IP: {}", &remote_addr);
+            println!("Handling connection from IP: {}", &remote_addr);
             async move { Ok::<_, Infallible>(ProxyService::new(middlewares, remote_addr)) }
         });
 

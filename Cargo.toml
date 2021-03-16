@@ -9,7 +9,6 @@ edition = "2018"
 [dependencies]
 hyper = "0.13.0"
 futures = "0.3.13"
-log = "0.4.8"
 chrono = { version = "0.4.19", features=["serde"] }
 regex = { version = "1.4.4", optional = true }
 serde_regex = {version = "1.1.0", optional = true }

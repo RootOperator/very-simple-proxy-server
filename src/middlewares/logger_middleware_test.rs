@@ -18,7 +18,7 @@ impl Middleware for Logger {
     fn before_request(&mut self, req: &mut Request<Body>, context: &ServiceContext, state: &State)
         -> Result<MiddlewareResult, MiddlewareError>
     {
-        info!("[{}] Starting a {} request to {}",
+        println!("[{}] Starting a {} request to {}",
             &context.req_id.to_string()[..6],
             req.method(),
             req.uri()
@@ -35,12 +35,12 @@ impl Middleware for Logger {
             Some(time) => {
                 let start_time: DateTime<Utc> = serde_json::from_str(&time)?;
 
-                info!("[{}] Request took {}ms",
+                println!("[{}] Request took {}ms",
                     &context.req_id.to_string()[..6],
                     (Utc::now() - start_time).num_milliseconds()    
                 );
             }
-            None => error!("[Logger] start time not found in state")
+            None => eprintln!("[Logger] start time not found in state")
         }
         Ok(Next)
     }

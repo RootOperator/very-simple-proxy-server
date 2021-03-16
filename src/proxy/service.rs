@@ -89,7 +89,7 @@ impl Service<Request<hyper::Body>> for ProxyService {
         .map_err(move |err| {
             for mw in mws_failure.lock().unwrap().iter_mut() {
                 if let Err(err) = mw.request_failure(&err, &context, &state_failure) {
-                    error!("Request_failure errored: {:?}", &err);
+                    eprintln!("Request_failure errored: {:?}", &err);
                 }
             }
             err
@@ -143,7 +143,7 @@ impl ProxyService {
                 Ok(Next) => ()
             }
         }
-        debug!("Early response is {:?}", &res);
+        println!("Early response is {:?}", &res);
         res
     }
 
@@ -151,7 +151,7 @@ impl ProxyService {
         if let Ok(mut state) = self.state.lock() {
             state.clear();
         } else {
-            error!("[FATAL] Cannot lock state in clean_stale_state");
+            eprintln!("[FATAL] Cannot lock state in clean_stale_state");
         }
     }
 

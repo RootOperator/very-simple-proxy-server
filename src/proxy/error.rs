@@ -21,12 +21,12 @@ impl MiddlewareError {
             Some(body) => body,
             None => {
                 let err = format!("Internal server error: {}", &description);
-                error!("{}", &err);
+                eprintln!("{}", &err);
                 err
             }
         };
 
-        debug!("Middelware error: {}", &description);
+        println!("Middelware error: {}", &description);
 
         MiddlewareError {
             description,
