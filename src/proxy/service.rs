@@ -78,6 +78,10 @@ impl Service<Request<hyper::Body>> for ProxyService {
                 break;
             }
         }
+        
+        if let Some(res) = before_res {
+            return Box::pin(future::ok(self.early_response(&context, res, &self.state)));
+        }
 
         if let Some(res) = before_res {
             return Box::pin(future::ok(self.early_response(&context, res, &self.state)));

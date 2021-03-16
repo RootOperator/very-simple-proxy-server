@@ -1,11 +1,13 @@
-use std::any::type_name;
-
-fn type_of<T>(_: T) -> &'static str {
-    type_name::<T>()
-}
+use ::SimpleProxy::middlewares::logger_middleware_test::Logger;
+use ::SimpleProxy::{Environment, SimpleProxy};
 
 
-fn main() {
-    let s: u16 = 4000;
-    println!("{:#?}", type_of(([0,0,0,0], s))); 
+#[tokio::main]
+async fn main() {
+    let mut proxy = SimpleProxy::new(5000, Environment::Development);
+    let logger = Logger::new();
+
+    proxy.add_middleware(Box::new(logger));
+
+    let _ = proxy.run().await;
 }
